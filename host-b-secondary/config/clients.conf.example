@@ -1,0 +1,13 @@
+# RADIUS client definition for the UniFi UDR7.
+#
+# IMPORTANT: Replace the secret below before deploying. Must match the secret
+# configured on Host A and in the UniFi RADIUS profile.
+#
+# Restrict ipaddr to your management VLAN CIDR once you know the source IP.
+
+client unifi {
+    ipaddr      = 0.0.0.0/0
+    secret      = CHANGE_ME_SHARED_SECRET
+    shortname   = unifi
+    nas_type    = other
+}

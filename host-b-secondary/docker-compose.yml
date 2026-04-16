@@ -1,0 +1,11 @@
+services:
+  freeradius:
+    image: freeradius/freeradius-server:latest
+    ports:
+      - "1812:1812/udp"
+    volumes:
+      # Mount custom config files read-only. Edit the files in ./config/ and
+      # run `docker compose restart` to pick up changes — no rebuild needed.
+      - ./config/clients.conf:/etc/freeradius/3.0/clients.conf:ro
+      - ./config/sites-available/default:/etc/freeradius/3.0/sites-available/default:ro
+    restart: unless-stopped

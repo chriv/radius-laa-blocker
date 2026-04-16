@@ -1,0 +1,7 @@
+.venv/
+.env
+.claude/
+
+# clients.conf contains the RADIUS shared secret -- never commit the real file.
+# Copy the .example file and fill in your secret; that copy stays local only.
+**/clients.conf
