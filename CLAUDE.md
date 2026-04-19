@@ -95,5 +95,8 @@ The `freeradius/freeradius-server` Docker image (v3.2.x) uses `/etc/freeradius/`
 ### sites-available/default must include listen sections
 Our custom `sites-available/default` replaces the built-in one entirely, including its socket bindings. The file **must** contain `listen { type = auth ... }` and `listen { type = acct ... }` blocks or FreeRADIUS will start successfully but silently ignore all incoming packets. See the existing file for the required blocks.
 
+### radiusd.conf version pinning
+`host-b-secondary/config/radiusd.conf` is a snapshot extracted from `freeradius/freeradius-server:latest` at the time of setup (v3.2.8), edited only to set `auth = yes` in the `log {}` section. Because it is volume-mounted over the image's built-in file, it will diverge if the image is updated. If the container fails to start after pulling a new image version, this file is the first thing to check — diff it against the new image's default (`docker run --rm freeradius/freeradius-server cat /etc/freeradius/radiusd.conf`) and reconcile any breaking changes.
+
 ### Guest SSID
 Intentionally excluded from this RADIUS profile — randomized MACs are acceptable on the guest SSID.
