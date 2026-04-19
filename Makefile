@@ -14,8 +14,8 @@ deploy: build
 # Start a long-running FreeRADIUS container for integration testing.
 # Uses host-2 (development) build. Re-run to restart with updated config.
 test-server:
-	bash scripts/build.sh host-2
-	docker compose -f build/host-2/docker-compose.yml up --build -d
+	bash scripts/build.sh host-1-dev
+	docker compose -f build/host-1-dev/docker-compose.yml up --build -d
 	@echo "Test server running. Run 'make test' to execute test suite."
 
 # Run the integration test suite against the running test-server.
@@ -26,4 +26,4 @@ test:
 test-all:
 	$(MAKE) test-server
 	$(MAKE) test
-	docker compose -f build/host-2/docker-compose.yml down
+	docker compose -f build/host-1-dev/docker-compose.yml down

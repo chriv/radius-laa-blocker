@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Deploy a docker-compose host via rsync + SSH. Called by deploy.sh.
+# Deploy a docker-compose instance. Called by deploy.sh.
+# If RADIUS_LAA_BLOCKER_SSH_HOST is empty, deploys to the local machine.
+# If set, rsyncs build artifacts to the remote host and runs compose via SSH.
 #
 # Usage: scripts/deploy-compose.sh <host>
-# Requires in hosts/<host>/.env:
-#   RADIUS_LAA_BLOCKER_SSH_HOST  — user@hostname
-#   RADIUS_LAA_BLOCKER_REMOTE_PATH — absolute path on target host
 
 set -euo pipefail
 
@@ -24,10 +23,15 @@ if [[ ! -d "$BUILD_DIR" ]]; then
     exit 1
 fi
 
-SSH_HOST="${RADIUS_LAA_BLOCKER_SSH_HOST:?RADIUS_LAA_BLOCKER_SSH_HOST not set in hosts/$HOST/.env}"
-REMOTE_PATH="${RADIUS_LAA_BLOCKER_REMOTE_PATH:?RADIUS_LAA_BLOCKER_REMOTE_PATH not set in hosts/$HOST/.env}"
-
-# TODO (Stage 4): rsync "$BUILD_DIR/" "$SSH_HOST:$REMOTE_PATH/"
-# TODO (Stage 4): ssh "$SSH_HOST" "cd $REMOTE_PATH && docker compose up --build -d"
-echo "STUB: rsync $BUILD_DIR/ $SSH_HOST:$REMOTE_PATH/"
-echo "STUB: ssh $SSH_HOST 'cd $REMOTE_PATH && docker compose up --build -d'"
+if [[ -z "${RADIUS_LAA_BLOCKER_SSH_HOST:-}" ]]; then
+    echo "Deploying locally from $BUILD_DIR"
+    # TODO (Stage 4): docker compose -f "$BUILD_DIR/docker-compose.yml" up --build -d
+    echo "STUB: docker compose -f $BUILD_DIR/docker-compose.yml up --build -d"
+else
+    REMOTE_PATH="${RADIUS_LAA_BLOCKER_REMOTE_PATH:?RADIUS_LAA_BLOCKER_REMOTE_PATH required for remote compose deployment}"
+    echo "Deploying to $RADIUS_LAA_BLOCKER_SSH_HOST:$REMOTE_PATH"
+    # TODO (Stage 4): rsync "$BUILD_DIR/" "$RADIUS_LAA_BLOCKER_SSH_HOST:$REMOTE_PATH/"
+    # TODO (Stage 4): ssh "$RADIUS_LAA_BLOCKER_SSH_HOST" "cd $REMOTE_PATH && docker compose up --build -d"
+    echo "STUB: rsync $BUILD_DIR/ $RADIUS_LAA_BLOCKER_SSH_HOST:$REMOTE_PATH/"
+    echo "STUB: ssh $RADIUS_LAA_BLOCKER_SSH_HOST 'cd $REMOTE_PATH && docker compose up --build -d'"
+fi
