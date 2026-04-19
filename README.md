@@ -15,12 +15,32 @@ When a client connects to a WPA2/3 Personal SSID with RADIUS MAC Authentication 
 | Host A | Primary — rejects randomized MACs | CapRover (Dockerfile baked image) |
 | Host B | Secondary fail-open — accepts all | docker-compose |
 
+## Assumptions
+
+This project is pre-release and makes specific environment assumptions. Adapting to other configurations is left for later.
+
+**Host A (primary blocker)**
+- Runs on an **arm64** host (e.g. Raspberry Pi 5). The Dockerfile uses `debian:bookworm-slim` + apt-installed FreeRADIUS because the official `freeradius/freeradius-server` Docker image is amd64-only.
+- **CapRover** is already installed and running. Deployment is via tarball upload (Method 2).
+- If your Host A is amd64, the Dockerfile base image can be changed to `freeradius/freeradius-server:latest` and the config COPY paths changed to `/etc/freeradius/` (no `3.0/` subdirectory).
+
+**Host B (secondary fail-open)**
+- Runs on any host with **Docker and Docker Compose** installed.
+- Deployed via `docker compose up -d`. Config is volume-mounted, no rebuild needed for changes.
+- The `freeradius/freeradius-server:latest` image is amd64-only. If your Host B is arm64, apply the same Dockerfile swap described for Host A above.
+
+**Network**
+- Both hosts must be reachable from the UniFi controller on **UDP port 1812**.
+- Both Docker deployments run behind Docker NAT — `clients.conf` uses `0.0.0.0/0` intentionally (see comments in the example file).
+
+**UniFi**
+- Tested with UniFi Network and a UDR7. RADIUS MAC Authentication must be available on Personal (PSK) SSIDs in your firmware version.
+
 ## Prerequisites
 
-- Both hosts must be reachable from the UniFi controller on **UDP port 1812**
-- Host A: CapRover instance running on the host
-- Host B: Docker and Docker Compose installed on the host
 - A strong shared secret (any long random string) ready to use
+- Host A: CapRover installed and running, arm64 host
+- Host B: Docker and Docker Compose installed
 
 ## First-time setup (both hosts)
 
