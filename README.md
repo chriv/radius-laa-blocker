@@ -1,5 +1,13 @@
 # radius-laa-blocker
 
+> **⚠️ Status: Experimental — considered a failure for the intended use case.**
+>
+> The premise of this project is that UniFi Network supports RADIUS MAC Authentication alongside WPA2/3 Personal (PSK) SSIDs. In practice, the only path to triggering a RADIUS server in UniFi Network appears to require enabling WPA2/3 **Enterprise**, which forces full 802.1X EAP authentication on clients (certificates, user/password prompts, EAP type configuration, etc.) — defeating the point of a transparent MAC-based filter on a PSK network.
+>
+> The FreeRADIUS configuration and deployment structures here are architecturally sound and left intact for reference. If a future UniFi firmware version exposes RADIUS MAC Auth on Personal SSIDs independently of Enterprise mode, this project should work as designed. Pull requests with findings welcome.
+
+---
+
 FreeRADIUS-based MAC Authentication Bypass (MAB) solution for UniFi wireless networks. Rejects clients using Locally Administered Addresses (randomized/private MACs) at the 802.11 association phase, preventing DHCP pool exhaustion from MAC randomization on non-guest SSIDs.
 
 ## How it works
