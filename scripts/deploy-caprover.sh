@@ -5,6 +5,17 @@
 # caprover CLI is expected on RADIUS_LAA_BLOCKER_CAPROVER_SSH_HOST (remote).
 # If CAPROVER_SSH_HOST is empty, caprover must be available locally.
 #
+# TODO: Switch to runtime envsubst via an entrypoint script so that secrets are
+# not baked into the image and env vars appear in the CapRover UI (App Configs →
+# Environment Variables). This requires:
+#   1. Dockerfile ships config as .tmpl files; entrypoint runs envsubst on start.
+#   2. Deploy script pushes RADIUS_LAA_BLOCKER_* vars to the CapRover app via
+#      the REST API before deploying the tarball.
+#   3. API call requires captain password, not just app token — add
+#      RADIUS_LAA_BLOCKER_CAPROVER_PASSWORD to host .env and defaults.env.
+#   4. With runtime substitution, changing the secret only requires a CapRover
+#      restart (Save & Restart), not a full rebuild and redeploy.
+#
 # Usage: scripts/deploy-caprover.sh <host>
 
 set -euo pipefail

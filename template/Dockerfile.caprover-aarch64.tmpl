@@ -10,6 +10,9 @@ RUN apt-get update \
     && sed -i 's/auth = no/auth = yes/' /etc/freeradius/3.0/radiusd.conf \
     && rm -rf /var/lib/apt/lists/*
 
+# TODO: Replace COPY with an entrypoint script that runs envsubst at container
+# start time, so secrets aren't baked into the image and env vars are
+# manageable via the CapRover UI. See deploy-caprover.sh for full TODO.
 COPY config/clients.conf /etc/freeradius/3.0/clients.conf
 COPY config/sites-available/default /etc/freeradius/3.0/sites-available/default
 

@@ -4,6 +4,9 @@
 
 FROM freeradius/freeradius-server:latest
 
+# TODO: Replace COPY with an entrypoint script that runs envsubst at container
+# start time, so secrets aren't baked into the image and env vars are
+# manageable via the CapRover UI. See deploy-caprover.sh for full TODO.
 COPY config/clients.conf /etc/freeradius/clients.conf
 COPY config/sites-available/default /etc/freeradius/sites-available/default
 
