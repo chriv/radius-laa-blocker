@@ -1,16 +1,29 @@
-# RADIUS client definition for the UniFi UDR7.
+# RADIUS client definition for the UniFi controller.
 #
-# IMPORTANT: Replace the secret below before deploying. Use the same value
-# you enter into the UniFi RADIUS profile. Both servers (Host A and Host B)
-# must use the same secret.
+# Copy this file to clients.conf and set the secret before deploying.
+# The secret must match what is configured in the UniFi RADIUS profile.
+# Both hosts (Host A and Host B) must use the same secret.
 #
-# The ipaddr range below accepts requests from any host. You should restrict
-# this to your actual management VLAN CIDR (e.g., 10.0.0.0/8 or 192.168.1.0/24)
-# once you know the IP address your UDR7 sends RADIUS requests from.
+# --- ipaddr note ---
+# FreeRADIUS validates the source IP of every incoming packet against this
+# definition and silently drops anything that doesn't match.
+#
+# When running under Docker (CapRover/Swarm), ALL requests arrive from the
+# Docker bridge NAT gateway — the actual UniFi controller IP is never visible
+# to the container. Using 0.0.0.0/0 is intentional and safe here:
+#   - The shared secret provides the real authentication barrier.
+#   - Restricting to a specific IP breaks silently if Docker changes its
+#     bridge subnet or the container is rescheduled on a different node.
+#
+# --- require_message_authenticator ---
+# UniFi firmware sends Message-Authenticator in Access-Request packets
+# (BlastRADIUS mitigation). Setting this to yes tells FreeRADIUS to require
+# it, silencing the startup warnings and enabling the protection.
 
 client unifi {
-    ipaddr      = 0.0.0.0/0
-    secret      = CHANGE_ME_SHARED_SECRET
-    shortname   = unifi
-    nas_type    = other
+    ipaddr                        = 0.0.0.0/0
+    secret                        = CHANGE_ME_SHARED_SECRET
+    shortname                     = unifi
+    nas_type                      = other
+    require_message_authenticator = yes
 }

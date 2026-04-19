@@ -43,6 +43,7 @@ host-a-primary/          ← Deploy via CapRover
   Dockerfile             ← Builds freeradius image with config baked in
   config/
     clients.conf
+    clients.conf.example ← Template (no secret); copy to clients.conf to deploy
     sites-available/default
 
 host-b-secondary/        ← Deploy via docker-compose
@@ -65,6 +66,7 @@ host-b-secondary/        ← Deploy via docker-compose
 - CapRover expects `captain-definition` and `Dockerfile` at the **root of the deployed archive**. When using `caprover deploy` CLI or uploading a tar.gz via the UI, archive the *contents* of `host-a-primary/`, not the directory itself.
 - CapRover app must have UDP port 1812 exposed. In the CapRover UI: App Config → "Ports" → add UDP 1812.
 - Enable "Has Persistent Data" only if you later switch to a volume-mount config strategy (not currently needed).
+- FreeRADIUS logs to a file inside the container, **not** to stdout. To view auth events: CapRover UI → App Logs won't show them. Instead exec into the container: `docker exec <container_id> tail -f /var/log/freeradius/radius.log`
 
 ### Host B — Secondary (docker-compose)
 - Config is **volume-mounted** (not baked in). Edit files in `host-b-secondary/config/` and run `docker compose restart` to apply changes — no rebuild required.

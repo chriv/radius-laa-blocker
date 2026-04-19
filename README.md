@@ -89,7 +89,11 @@ Or via the CapRover web UI: Apps → [your app] → Deployment → upload the ta
 
 ### 3. Verify
 
-Check the app logs in the CapRover UI (Apps → [your app] → Logs). You should see FreeRADIUS start up and report it is ready to process requests.
+CapRover app logs (UI → Apps → [your app] → Logs) will show FreeRADIUS startup — look for `Ready to process requests`. Note that FreeRADIUS writes auth events (accepts/rejects) to a file inside the container, not stdout, so they won't appear in the CapRover log UI. To watch live auth events, exec into the container:
+
+```bash
+docker exec <container_id> tail -f /var/log/freeradius/radius.log
+```
 
 ---
 

@@ -1,5 +1,17 @@
 server default {
 
+    listen {
+        type = auth
+        ipaddr = *
+        port = 0
+    }
+
+    listen {
+        type = acct
+        ipaddr = *
+        port = 0
+    }
+
     # -------------------------------------------------------------------
     # authorize: runs first for every Access-Request.
     # UniFi sends the client MAC in User-Name for MAB (MAC Auth Bypass).
