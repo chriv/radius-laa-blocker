@@ -12,4 +12,8 @@ RUN apt-get update \
 
 EXPOSE 1812/udp
 
+# TODO: Replace syslog log driver approach with tee + nc for dual output:
+#   freeradius -f & tail -F /var/log/freeradius/radius.log | tee >(nc -u $SYSLOG_HOST $SYSLOG_PORT)
+# This would keep docker logs / CapRover UI working while still forwarding to syslog,
+# and eliminate the build.sh conditional + docker-compose logging block entirely.
 CMD ["sh", "-c", "freeradius -f & tail -F /var/log/freeradius/radius.log"]
