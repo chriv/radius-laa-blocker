@@ -1,6 +1,6 @@
 # radius-laa-blocker
 
-> **⚠️ Status: Pre-release / Experimental** — Host B (secondary fail-open) is operational. Host A (primary LAA blocker) pending deployment.
+> **⚠️ Status: Experimental** — Both hosts operational. LAA blocking confirmed working. UniFi's behavior with two RADIUS servers is not yet fully characterized — if it distributes requests rather than failing over, both hosts may need to run the LAA blocking logic rather than one blocker and one fail-open.
 
 ---
 
