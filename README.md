@@ -75,15 +75,13 @@ In the CapRover web UI:
 
 ### 2. Package and deploy
 
-Using the CapRover CLI (install once with `npm install -g caprover`):
+Build the deployment tarball (checks that `clients.conf` exists first):
 
 ```bash
-cd host-a-primary
-tar -czf ../deploy-host-a.tar.gz .
-caprover deploy -t ../deploy-host-a.tar.gz -a radius-blocker
+./host-a-primary/build-deploy.sh
 ```
 
-Or via the CapRover web UI: Apps → [your app] → Deployment → upload the tar.gz.
+This creates `deploy-host-a.tar` in the repo root. Upload it via the CapRover web UI: Apps → [your app] → Deployment → **Method 2: Tarball**.
 
 > **Important:** The tar.gz must contain `captain-definition` and `Dockerfile` at its root — achieved by running `tar` from *inside* `host-a-primary/`, as shown above.
 
