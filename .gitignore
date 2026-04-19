@@ -1,11 +1,36 @@
-.venv/
-.env
-.claude/
+# ── Legacy production folders (preserved on disk, untracked during v0.2 dev) ──
+host-a-primary/
+host-b-secondary/
 
-# clients.conf contains the RADIUS shared secret -- never commit the real file.
+# ── Sensitive host configs — commit only .example versions ────────────────────
+hosts/*/.env
+hosts/*/*.ini
+
+# clients.conf contains the RADIUS shared secret — never commit the real file.
 # Copy the .example file and fill in your secret; that copy stays local only.
 **/clients.conf
 
-# Deployment tarballs may contain clients.conf with the real secret.
+# ── Build and deployment artifacts (contain substituted secrets) ──────────────
+build/
+deployments/
 *.tar
 *.tar.gz
+*.tgz
+
+# ── Python ────────────────────────────────────────────────────────────────────
+.venv/
+tests/.venv/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+
+# ── Keys and certs ────────────────────────────────────────────────────────────
+*.pem
+*.key
+*.crt
+*.p12
+
+# ── Editor / OS ───────────────────────────────────────────────────────────────
+.env
+.claude/
+.DS_Store
