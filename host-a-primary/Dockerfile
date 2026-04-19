@@ -1,4 +1,4 @@
-FROM freeradius/freeradius-server:latest
+FROM --platform=linux/arm64 freeradius/freeradius-server:latest
 
 COPY config/clients.conf /etc/freeradius/clients.conf
 COPY config/sites-available/default /etc/freeradius/sites-available/default
