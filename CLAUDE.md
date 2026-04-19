@@ -91,8 +91,15 @@ In UniFi Network, when you enable RADIUS MAC Authentication on an SSID, a **"MAC
 
 **PPSK note:** PPSK (Private Pre-Shared Keys) and RADIUS MAC Authentication are mutually exclusive on the same SSID. However, UniFi's built-in MAC allow/block lists are independent of RADIUS and *can* be combined with PPSK — so a PPSK SSID with a local MAC allow list is a viable alternative for future SSIDs where per-device PSKs are desirable alongside hardware MAC gating.
 
-### FreeRADIUS config path
-The `freeradius/freeradius-server` Docker image (v3.2.x) uses `/etc/freeradius/` — **not** `/etc/freeradius/3.0/` as some older documentation suggests. All volume mounts and Dockerfile COPY paths use `/etc/freeradius/`.
+### FreeRADIUS config paths — Host A vs Host B differ
+The two hosts use different base images and therefore different config paths:
+
+| Host | Base image | Config path |
+|------|-----------|-------------|
+| Host A | `debian:bookworm-slim` + apt `freeradius` | `/etc/freeradius/3.0/` |
+| Host B | `freeradius/freeradius-server:latest` | `/etc/freeradius/` |
+
+Host A uses Debian because the official `freeradius/freeradius-server` Docker image is amd64-only and fails with `exec format error` on arm64 hosts. The Debian apt package (v3.2.1) is native arm64 and works correctly.
 
 ### sites-available/default must include listen sections
 Our custom `sites-available/default` replaces the built-in one entirely, including its socket bindings. The file **must** contain `listen { type = auth ... }` and `listen { type = acct ... }` blocks or FreeRADIUS will start successfully but silently ignore all incoming packets. See the existing file for the required blocks.

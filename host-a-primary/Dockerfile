@@ -1,6 +1,12 @@
-FROM --platform=linux/arm64 freeradius/freeradius-server:latest
+FROM debian:bookworm-slim
 
-COPY config/clients.conf /etc/freeradius/clients.conf
-COPY config/sites-available/default /etc/freeradius/sites-available/default
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends freeradius \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY config/clients.conf /etc/freeradius/3.0/clients.conf
+COPY config/sites-available/default /etc/freeradius/3.0/sites-available/default
 
 EXPOSE 1812/udp
+
+CMD ["freeradius", "-f"]
