@@ -7,3 +7,8 @@ services:
       - ./config/clients.conf:${RADIUS_LAA_BLOCKER_CONFIG_PATH}/clients.conf:ro
       - ./config/sites-available/default:${RADIUS_LAA_BLOCKER_CONFIG_PATH}/sites-available/default:ro
     restart: unless-stopped
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "udp://${RADIUS_LAA_BLOCKER_SYSLOG_HOST}:${RADIUS_LAA_BLOCKER_SYSLOG_PORT}"
+        tag: "freeradius"

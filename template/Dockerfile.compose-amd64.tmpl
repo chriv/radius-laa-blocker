@@ -9,4 +9,4 @@ RUN sed -i 's/auth = no/auth = yes/' /etc/freeradius/radiusd.conf
 
 EXPOSE 1812/udp
 
-CMD ["freeradius", "-f"]
+CMD ["sh", "-c", "freeradius -f & tail -F /var/log/freeradius/radius.log"]

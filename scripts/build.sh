@@ -40,7 +40,7 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/config/sites-available"
 
 # Variables to substitute (explicit list keeps FreeRADIUS ${var} syntax intact)
-SUBST_VARS='$RADIUS_LAA_BLOCKER_SECRET:$RADIUS_LAA_BLOCKER_PORT:$RADIUS_LAA_BLOCKER_CONFIG_PATH'
+SUBST_VARS='$RADIUS_LAA_BLOCKER_SECRET:$RADIUS_LAA_BLOCKER_PORT:$RADIUS_LAA_BLOCKER_CONFIG_PATH:$RADIUS_LAA_BLOCKER_SYSLOG_HOST:$RADIUS_LAA_BLOCKER_SYSLOG_PORT'
 
 # Generate config files (same for all deploy methods)
 envsubst "$SUBST_VARS" \
@@ -61,6 +61,11 @@ case "$RADIUS_LAA_BLOCKER_DEPLOY_METHOD" in
         envsubst "$SUBST_VARS" \
             < "$REPO_ROOT/template/docker-compose.tmpl" \
             > "$BUILD_DIR/docker-compose.yml"
+        # Remove syslog logging block if SYSLOG_HOST is not configured
+        if [[ -z "${RADIUS_LAA_BLOCKER_SYSLOG_HOST:-}" ]]; then
+            sed -i.bak '/^    logging:/,/^        tag:/d' "$BUILD_DIR/docker-compose.yml"
+            rm -f "$BUILD_DIR/docker-compose.yml.bak"
+        fi
         cp "$REPO_ROOT/template/Dockerfile.compose-${RADIUS_LAA_BLOCKER_ARCH}.tmpl" \
            "$BUILD_DIR/Dockerfile"
         ;;

@@ -12,4 +12,4 @@ RUN apt-get update \
 
 EXPOSE 1812/udp
 
-CMD ["freeradius", "-f"]
+CMD ["sh", "-c", "freeradius -f & tail -F /var/log/freeradius/radius.log"]
