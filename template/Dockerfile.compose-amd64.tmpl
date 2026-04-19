@@ -1,0 +1,12 @@
+# Compose deployment on amd64 hosts.
+# Thin wrapper over the official image to enable auth logging.
+# Config files are volume-mounted by docker-compose.yml — not copied here.
+# Config path: /etc/freeradius/
+
+FROM freeradius/freeradius-server:latest
+
+RUN sed -i 's/auth = no/auth = yes/' /etc/freeradius/radiusd.conf
+
+EXPOSE 1812/udp
+
+CMD ["sh", "-c", "freeradius -f & tail -F /var/log/freeradius/radius.log"]

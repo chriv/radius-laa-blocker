@@ -1,0 +1,21 @@
+# CapRover deployment on aarch64 hosts.
+# Uses Debian apt freeradius — the official freeradius/freeradius-server image
+# is amd64-only and fails with exec format error on arm64.
+# Config path: /etc/freeradius/3.0/
+
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends freeradius freeradius-utils \
+    && sed -i 's/auth = no/auth = yes/' /etc/freeradius/3.0/radiusd.conf \
+    && rm -rf /var/lib/apt/lists/*
+
+# TODO: Replace COPY with an entrypoint script that runs envsubst at container
+# start time, so secrets aren't baked into the image and env vars are
+# manageable via the CapRover UI. See deploy-caprover.sh for full TODO.
+COPY config/clients.conf /etc/freeradius/3.0/clients.conf
+COPY config/sites-available/default /etc/freeradius/3.0/sites-available/default
+
+EXPOSE 1812/udp
+
+CMD ["sh", "-c", "freeradius -f & tail -F /var/log/freeradius/radius.log"]

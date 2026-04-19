@@ -1,0 +1,19 @@
+# RADIUS client configuration.
+# Generated from template — do not edit the deployed copy directly.
+# Edit template/config/clients.conf.tmpl and rebuild.
+#
+# ipaddr = 0.0.0.0/0: All requests arrive via the Docker bridge NAT gateway;
+# the real AP controller IP is never visible to the container. The shared
+# secret is the actual authentication barrier here.
+#
+# require_message_authenticator: AP controllers supporting BlastRADIUS
+# mitigation send Message-Authenticator in Access-Request packets. Setting
+# this to yes silences FreeRADIUS startup warnings and enforces the protection.
+
+client ap_controller {
+    ipaddr                        = 0.0.0.0/0
+    secret                        = ${RADIUS_LAA_BLOCKER_SECRET}
+    shortname                     = ap_controller
+    nas_type                      = other
+    require_message_authenticator = yes
+}

@@ -1,0 +1,36 @@
+.PHONY: build deploy test-setup test-server test test-all
+
+# Build deployment artifacts for a host.
+# Usage: make build HOST=host-1-dev
+build:
+	@test -n "$(HOST)" || (echo "Usage: make build HOST=<host>"; exit 1)
+	bash scripts/build.sh $(HOST)
+
+# Build and deploy a host.
+# Usage: make deploy HOST=host-1-dev
+deploy: build
+	bash scripts/deploy.sh $(HOST)
+
+# Create the Python venv and install test dependencies.
+test-setup:
+	python3 -m venv tests/.venv
+	tests/.venv/bin/pip install --quiet --upgrade pip
+	tests/.venv/bin/pip install --quiet -r tests/requirements.txt
+	@echo "Test environment ready. Run 'make test-server' then 'make test'."
+
+# Start a long-running FreeRADIUS container for integration testing.
+# Re-run to restart with updated config.
+test-server:
+	bash scripts/build.sh host-1-dev
+	docker compose -f build/host-1-dev/docker-compose.yml up --build -d
+	@echo "Test server running on port 18120. Run 'make test' to execute suite."
+
+# Run the integration test suite against the running test-server.
+test:
+	@test -f tests/.venv/bin/pytest || (echo "Run 'make test-setup' first"; exit 1)
+	cd tests && .venv/bin/pytest -v
+
+# Full test cycle: start server, run tests, tear down.
+test-all: test-server
+	$(MAKE) test
+	docker compose -f build/host-1-dev/docker-compose.yml down

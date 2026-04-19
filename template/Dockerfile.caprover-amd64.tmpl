@@ -1,0 +1,15 @@
+# CapRover deployment on amd64 hosts.
+# Uses the official freeradius/freeradius-server image.
+# Config path: /etc/freeradius/
+
+FROM freeradius/freeradius-server:latest
+
+# TODO: Replace COPY with an entrypoint script that runs envsubst at container
+# start time, so secrets aren't baked into the image and env vars are
+# manageable via the CapRover UI. See deploy-caprover.sh for full TODO.
+COPY config/clients.conf /etc/freeradius/clients.conf
+COPY config/sites-available/default /etc/freeradius/sites-available/default
+
+EXPOSE 1812/udp
+
+CMD ["sh", "-c", "freeradius -f & tail -F /var/log/freeradius/radius.log"]

@@ -4,108 +4,148 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Purpose
 
-A FreeRADIUS-based MAC Authentication Bypass (MAB) solution for UniFi wireless networks that rejects clients using Locally Administered Addresses (randomized MACs) at the 802.11 association phase. Prevents DHCP pool exhaustion from randomized MACs on non-guest SSIDs.
+A FreeRADIUS-based MAC Authentication Bypass (MAB) solution that rejects clients using Locally
+Administered Addresses (randomized MACs) at the 802.11 association phase. Prevents DHCP pool
+exhaustion and reduces noise from MAC-randomizing devices on networks where hardware identity
+matters.
 
-## Architecture
-
-Two separate FreeRADIUS deployments across two physical hosts:
-
-| Host | Role | Deployment |
-|------|------|------------|
-| Host A | Primary RADIUS Blocker | CapRover (Docker Swarm) |
-| Host B | Secondary Fail-Open | docker-compose |
-
-Both listen on UDP `1812`. UniFi queries Host A first; Host B is only queried when Host A is unreachable.
-
-### Host A — Primary Blocker Logic
-- Inspects `User-Name` attribute (UniFi sends MAC as 12-char hex, e.g. `AABBCCDDEEFF`)
-- LAA detection regex: `^.[26aeAE].*` (second character indicates locally administered bit)
-- Rejects LAA MACs with Reply-Message "Randomized MAC Rejected"
-- Accepts all universally administered MACs (`Auth-Type := Accept`)
-
-### Host B — Fail-Open Logic
-- Blindly sets `Auth-Type := Accept` for all requests
-- Pure disaster-recovery fallback; no filtering logic
-
-## Key Configuration Details
-
-- **RADIUS clients:** `clients.conf` uses `ipaddr = 0.0.0.0/0`. On Host B (docker-compose), all requests arrive from the Docker bridge NAT gateway (typically `192.168.65.1`) — the real UniFi IP is never visible to the container. `0.0.0.0/0` is intentional; the shared secret is the real auth barrier. Set `require_message_authenticator = yes` in the client block — UniFi sends it and FreeRADIUS will warn loudly at startup until you do.
-- **MAC format from UniFi:** Configurable per-SSID in UniFi Network (Settings → WiFi → [SSID] → RADIUS MAC Auth → MAC Address Format). Options include `aa:bb:cc:dd:ee:ff` (lowercase colon, the default), `AA-BB-CC-DD-EE-FF` (uppercase dash), and `aabbccddeeff` (no separator). The LAA regex `^.[26aeAE]` is format-agnostic — position 1 is always the second nibble of the first octet regardless of separator style. UniFi sends the MAC in both `User-Name` and `User-Password` (MAB convention), and also in `Calling-Station-Id`.
-- **FreeRADIUS version:** `freeradius/freeradius-server` Docker image
-- **UniFi RADIUS profile:** Host A = Primary Server, Host B = Secondary Server, both port 1812
-- The custom reject/accept logic lives in `sites-available/default` → `authorize` section using `unlang`
+Every deployed instance is an enforcer. There is no fail-open variant.
 
 ## Repository Structure
 
 ```
-host-a-primary/          ← Deploy via CapRover
-  captain-definition     ← Tells CapRover to use the Dockerfile
-  Dockerfile             ← Builds freeradius image with config baked in
+defaults.env                    ← project-level variable defaults (committed, no secrets)
+hosts.ini                       ← host inventory: deploy_method, arch, environment per host
+Makefile                        ← build, deploy, test-server, test, test-all targets
+template/
   config/
-    clients.conf
-    clients.conf.example ← Template (no secret); copy to clients.conf to deploy
-    sites-available/default
-
-host-b-secondary/        ← Deploy via docker-compose
-  docker-compose.yml     ← Mounts config files as read-only volumes
-  config/
-    clients.conf
-    clients.conf.example ← Template (no secret); copy to clients.conf to deploy
-    radiusd.conf         ← Full radiusd.conf with auth logging enabled
-    sites-available/default
+    clients.conf.tmpl           ← ${RADIUS_LAA_BLOCKER_SECRET} substituted at build time
+    sites-available/default.tmpl ← LAA blocking logic (static, no substitution)
+  Dockerfile.caprover-debian.tmpl  ← CapRover on aarch64 (bakes config into image)
+  Dockerfile.caprover-amd64.tmpl   ← CapRover on amd64 (bakes config into image)
+  Dockerfile.compose-debian.tmpl   ← compose on aarch64 (base image, config volume-mounted)
+  Dockerfile.compose-amd64.tmpl    ← compose on amd64 (base image, config volume-mounted)
+  captain-definition.tmpl       ← CapRover deployment descriptor
+  docker-compose.tmpl           ← ${RADIUS_LAA_BLOCKER_PORT} and ${RADIUS_LAA_BLOCKER_CONFIG_PATH}
+scripts/
+  detect-arch.sh                ← exports RADIUS_LAA_BLOCKER_ARCH, BASE_IMAGE, CONFIG_PATH
+  build.sh <host>               ← merges env, envsubst templates → build/<host>/
+  deploy.sh <host>              ← dispatches to caprover or compose deploy
+  deploy-caprover.sh <host>     ← tarball → caprover deploy (builds on CapRover server)
+  deploy-compose.sh <host>      ← rsync build/<host>/ → SSH docker compose up --build
+tests/
+  requirements.txt              ← pyrad, pytest
+  test_laa_blocking.py          ← integration tests (Stage 5)
+hosts/
+  host-1/
+    .env.example                ← committed, all keys, no secret (production defaults)
+    .env                        ← gitignored, fill in before deploying
+  host-2/
+    .env.example                ← committed, all keys, no secret (development defaults)
+    .env                        ← gitignored, fill in before deploying
+build/                          ← gitignored, generated by build.sh
+deployments/                    ← gitignored, tarballs generated by deploy-caprover.sh
 ```
 
-## Deployment Notes
+**Legacy folders** `host-a-primary/` and `host-b-secondary/` remain on disk (gitignored) for the
+duration of v0.2 development. The production docker-compose container in `host-b-secondary/` is
+still running. Do not delete these folders until the new deployment is validated.
 
-### Before deploying either host
-1. Replace `CHANGE_ME_SHARED_SECRET` in **both** `clients.conf` files with the same strong secret. This same value goes into the UniFi RADIUS profile.
-2. Optionally restrict `ipaddr = 0.0.0.0/0` in `clients.conf` to your actual management subnet once you know it.
+## Variable System
 
-### Host A — Primary (CapRover)
-- Config is **baked into the Docker image** at build time (via `COPY` in the Dockerfile). To change config: edit files, then redeploy the app in CapRover (triggers a rebuild).
-- CapRover expects `captain-definition` and `Dockerfile` at the **root of the deployed archive**. When using `caprover deploy` CLI or uploading a tar.gz via the UI, archive the *contents* of `host-a-primary/`, not the directory itself.
-- CapRover app must have UDP port 1812 exposed. In the CapRover UI: App Config → "Ports" → add UDP 1812.
-- Enable "Has Persistent Data" only if you later switch to a volume-mount config strategy (not currently needed).
-- FreeRADIUS logs to a file inside the container, **not** to stdout. To view auth events: CapRover UI → App Logs won't show them. Instead exec into the container: `docker exec <container_id> tail -f /var/log/freeradius/radius.log`
+All runtime configuration flows through `RADIUS_LAA_BLOCKER_*` environment variables.
 
-### Host B — Secondary (docker-compose)
-- Config is **volume-mounted** (not baked in). Edit files in `host-b-secondary/config/` and run `docker compose restart` to apply changes — no rebuild required.
-- Run from the `host-b-secondary/` directory: `docker compose up -d`
-- FreeRADIUS logs to a file inside the container, **not** to stdout. `docker compose logs -f` will be empty. Instead:
-  - Auth log (accept/reject events): `docker exec <container> tail -f /var/log/freeradius/radius.log`
-  - Or by name: `docker exec host-b-secondary-freeradius-1 tail -f /var/log/freeradius/radius.log`
+| Variable | Default | Required | Notes |
+|----------|---------|----------|-------|
+| `RADIUS_LAA_BLOCKER_SECRET` | — | yes | RADIUS shared secret; never commit |
+| `RADIUS_LAA_BLOCKER_PORT` | `1812` | no | Host-side UDP port AP controller uses |
+| `RADIUS_LAA_BLOCKER_DEPLOY_METHOD` | `compose` | no | `caprover` or `compose` |
+| `RADIUS_LAA_BLOCKER_TARGET_ARCH` | `auto` | no | `auto`, `aarch64`, or `amd64` |
+| `RADIUS_LAA_BLOCKER_CAPROVER_APP` | — | if caprover | CapRover app name |
+| `RADIUS_LAA_BLOCKER_CAPROVER_URL` | — | if caprover | CapRover server URL |
+| `RADIUS_LAA_BLOCKER_CAPROVER_TOKEN` | — | if caprover | App token; never commit |
+| `RADIUS_LAA_BLOCKER_SYSLOG_HOST` | — | no | Syslog server IP (Stage 6) |
+| `RADIUS_LAA_BLOCKER_SYSLOG_PORT` | `514` | no | Syslog server port |
 
-### UniFi MAC Address Format setting
-In UniFi Network, when you enable RADIUS MAC Authentication on an SSID, a **"MAC Address Format"** dropdown appears. Set it to whatever you prefer — the LAA regex in `sites-available/default` works for all standard formats. Lowercase colon-separated (`aa:bb:cc:dd:ee:ff`) is the default and a reasonable choice. After first deployment, confirm by checking container logs for the `User-Name =` value in incoming Access-Request packets:
-- Host A: CapRover app logs (or `docker logs <container>`)
-- Host B: `docker compose logs -f`
+`defaults.env` holds safe project-level defaults. `hosts/<host>/.env` holds host-level overrides
+and secrets. `build.sh` merges them in that order.
 
-### UniFi RADIUS Profile Setup
-1. UniFi Network → Settings → Profiles → RADIUS → Create New
-2. Primary Server: Host A IP, port 1812, shared secret
-3. Secondary Server: Host B IP, port 1812, same shared secret
-4. Apply this profile to target SSIDs (not the guest SSID — randomized MACs are intentionally allowed there)
-5. On each target SSID: Settings → WiFi → [SSID] → Advanced → enable "RADIUS MAC Authentication", select your profile, choose a MAC Address Format
+## Build and Deploy
 
-**Failover behavior:** Not yet confirmed. UniFi may use sequential failover (primary first, secondary only when unreachable) or may distribute requests across both servers. Further testing needed.
+```bash
+# Build deployment artifacts for a host
+make build HOST=host-1
 
-**PPSK note:** PPSK (Private Pre-Shared Keys) and RADIUS MAC Authentication are mutually exclusive on the same SSID. However, UniFi's built-in MAC allow/block lists are independent of RADIUS and *can* be combined with PPSK — so a PPSK SSID with a local MAC allow list is a viable alternative for future SSIDs where per-device PSKs are desirable alongside hardware MAC gating.
+# Build and deploy
+make deploy HOST=host-1
 
-### FreeRADIUS config paths — Host A vs Host B differ
-The two hosts use different base images and therefore different config paths:
+# Integration testing
+make test-server    # start test container (host-2 dev build)
+make test           # run pyrad test suite
+make test-all       # test-server + test + teardown
+```
 
-| Host | Base image | Config path |
-|------|-----------|-------------|
-| Host A | `debian:bookworm-slim` + apt `freeradius` | `/etc/freeradius/3.0/` |
-| Host B | `freeradius/freeradius-server:latest` | `/etc/freeradius/` |
+## Architecture and Config Paths
 
-Host A uses Debian because the official `freeradius/freeradius-server` Docker image is amd64-only and fails with `exec format error` on arm64 hosts. The Debian apt package (v3.2.1) is native arm64 and works correctly.
+Architecture is detected from `uname -m` by `scripts/detect-arch.sh` and can be overridden via
+`RADIUS_LAA_BLOCKER_TARGET_ARCH`.
+
+| Arch | Base image | FreeRADIUS config path |
+|------|-----------|----------------------|
+| `aarch64` / `arm64` | `debian:bookworm-slim` + apt `freeradius` | `/etc/freeradius/3.0/` |
+| `x86_64` / `amd64` | `freeradius/freeradius-server:latest` | `/etc/freeradius/` |
+
+The official `freeradius/freeradius-server` image is amd64-only. It fails with `exec format error`
+on arm64 hosts. The Debian apt package is native arm64.
+
+## Deployment Models
+
+**CapRover:** Config is baked into the Docker image at build time (`COPY` in Dockerfile). The
+tarball is uploaded to CapRover which runs `docker build` on the server. No local Docker build.
+
+**Compose:** A custom base image is built on the target host (`docker compose up --build`). Config
+files are volume-mounted, so they can be updated with a `docker compose restart` without rebuilding.
+`deploy-compose.sh` rsyncs `build/<host>/` to the target and runs compose via SSH.
+
+## LAA Blocking Logic
+
+Lives in `template/config/sites-available/default.tmpl` → `authorize` section.
+
+- Regex: `^.[26aeAE]` — matches MACs where the second character indicates the locally administered
+  bit is set (bit 1 of the first octet)
+- Format-agnostic: position 1 is always the second nibble of the first octet regardless of
+  separator style (colon, dash, or bare hex)
+- Match → `Access-Reject` with `Reply-Message = "Randomized MAC Rejected"`
+- No match → `Auth-Type := Accept`
+
+## Key Technical Notes
 
 ### sites-available/default must include listen sections
-Our custom `sites-available/default` replaces the built-in one entirely, including its socket bindings. The file **must** contain `listen { type = auth ... }` and `listen { type = acct ... }` blocks or FreeRADIUS will start successfully but silently ignore all incoming packets. See the existing file for the required blocks.
+The custom `sites-available/default` replaces the built-in virtual server entirely. It **must**
+contain `listen { type = auth ... }` and `listen { type = acct ... }` blocks. Without them,
+FreeRADIUS starts successfully but silently drops all incoming packets.
 
-### radiusd.conf version pinning
-`host-b-secondary/config/radiusd.conf` is a snapshot extracted from `freeradius/freeradius-server:latest` at the time of setup (v3.2.8), edited only to set `auth = yes` in the `log {}` section. Because it is volume-mounted over the image's built-in file, it will diverge if the image is updated. If the container fails to start after pulling a new image version, this file is the first thing to check — diff it against the new image's default (`docker run --rm freeradius/freeradius-server cat /etc/freeradius/radiusd.conf`) and reconcile any breaking changes.
+### clients.conf: ipaddr = 0.0.0.0/0 is intentional
+Under Docker (both CapRover/Swarm and compose), all RADIUS packets arrive from the Docker bridge
+NAT gateway. The real AP controller IP is never visible to the container. Using `0.0.0.0/0` is
+required for the container to accept any traffic. The shared secret is the authentication barrier.
 
-### Guest SSID
-Intentionally excluded from this RADIUS profile — randomized MACs are acceptable on the guest SSID.
+### auth logging
+`auth = yes` in `radiusd.conf` enables logging of both accept and reject events to
+`/var/log/freeradius/radius.log`. FreeRADIUS does not log to stdout — `docker logs` and
+`docker compose logs` will appear empty. Use `docker exec <container> tail -f /var/log/freeradius/radius.log`.
+
+### envsubst and FreeRADIUS config files
+FreeRADIUS uses `${varname}` syntax in `radiusd.conf` for its own internal variables. When running
+`envsubst` on templates, always pass an explicit variable list to avoid clobbering FreeRADIUS's own
+references:
+```bash
+envsubst '$RADIUS_LAA_BLOCKER_SECRET:$RADIUS_LAA_BLOCKER_PORT:$RADIUS_LAA_BLOCKER_CONFIG_PATH'
+```
+
+### CapRover app configuration
+- CapRover app must have UDP port exposed: App Config → Ports → add UDP port matching
+  `RADIUS_LAA_BLOCKER_PORT`
+- Set "Do not expose as web-app" — this is a UDP service, not HTTP
+- `captain-definition` and `Dockerfile` must be at the **root** of the deployed tarball
+  (i.e., tar the contents of `build/<host>/`, not the directory itself — `tar -czf ... -C build/<host> .`)
