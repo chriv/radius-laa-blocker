@@ -23,15 +23,14 @@ if [[ ! -d "$BUILD_DIR" ]]; then
     exit 1
 fi
 
-if [[ -z "${RADIUS_LAA_BLOCKER_SSH_HOST:-}" ]]; then
-    echo "Deploying locally from $BUILD_DIR"
-    # TODO (Stage 4): docker compose -f "$BUILD_DIR/docker-compose.yml" up --build -d
-    echo "STUB: docker compose -f $BUILD_DIR/docker-compose.yml up --build -d"
+SSH_HOST="${RADIUS_LAA_BLOCKER_SSH_HOST:-}"
+
+if [[ -z "$SSH_HOST" ]]; then
+    echo "Deploying locally from $BUILD_DIR..."
+    docker compose -f "$BUILD_DIR/docker-compose.yml" up --build -d
 else
     REMOTE_PATH="${RADIUS_LAA_BLOCKER_REMOTE_PATH:?RADIUS_LAA_BLOCKER_REMOTE_PATH required for remote compose deployment}"
-    echo "Deploying to $RADIUS_LAA_BLOCKER_SSH_HOST:$REMOTE_PATH"
-    # TODO (Stage 4): rsync "$BUILD_DIR/" "$RADIUS_LAA_BLOCKER_SSH_HOST:$REMOTE_PATH/"
-    # TODO (Stage 4): ssh "$RADIUS_LAA_BLOCKER_SSH_HOST" "cd $REMOTE_PATH && docker compose up --build -d"
-    echo "STUB: rsync $BUILD_DIR/ $RADIUS_LAA_BLOCKER_SSH_HOST:$REMOTE_PATH/"
-    echo "STUB: ssh $RADIUS_LAA_BLOCKER_SSH_HOST 'cd $REMOTE_PATH && docker compose up --build -d'"
+    echo "Deploying to $SSH_HOST:$REMOTE_PATH..."
+    rsync -av --delete "$BUILD_DIR/" "$SSH_HOST:$REMOTE_PATH/"
+    ssh "$SSH_HOST" "cd '$REMOTE_PATH' && docker compose up --build -d"
 fi
