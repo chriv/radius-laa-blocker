@@ -8,12 +8,12 @@ The system will reject clients using Locally Administered Addresses (Randomized 
 ## Architecture & Deployment Strategy
 The deployment requires two separate `freeradius/freeradius-server` Docker configurations for two distinct host machines:
 
-1. **Host A: Primary RADIUS Blocker (Raspberry Pi)**
+1. **Host A: Primary RADIUS Blocker**
    - **Role:** The primary gatekeeper.
    - **Port:** UDP `1812`.
    - **Logic:** Inspects the `User-Name` attribute. Rejects LAA MACs using regex. Accepts universally administered MACs.
 
-2. **Host B: Secondary Fail-Open RADIUS (Mac Mini / Core Infrastructure)**
+2. **Host B: Secondary Fail-Open RADIUS**
    - **Role:** Disaster recovery fallback. UniFi only queries this if Host A is offline.
    - **Port:** UDP `1812`.
    - **Logic:** A dummy server that blindly sets `Auth-Type := Accept` for *all* requests.
@@ -36,12 +36,12 @@ The deployment requires two separate `freeradius/freeradius-server` Docker confi
 ## Required Outputs
 Please generate the complete file structures and raw code for *both* deployments:
 
-### For Host A (Primary - Raspberry Pi)
+### For Host A (Primary)
 1. Running CapRover on a Docker swarm. Will need to use a simple CapRover deployment method for a container (with persistent storage).
 2. The custom `unlang` block for the `default` site containing the regex rejection logic.
 3. The `clients.conf` block.
 
-### For Host B (Secondary - Mac Mini)
+### For Host B (Secondary)
 4. `docker-compose.yml` mapping UDP `1812:1812`.
 5. The custom `unlang` block for the `default` site containing the blind accept logic.
 6. The `clients.conf` block.

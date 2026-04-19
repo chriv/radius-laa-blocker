@@ -1,5 +1,17 @@
 server default {
 
+    listen {
+        type = auth
+        ipaddr = *
+        port = 0
+    }
+
+    listen {
+        type = acct
+        ipaddr = *
+        port = 0
+    }
+
     # -------------------------------------------------------------------
     # Fail-open secondary server.
     # This server is only queried by UniFi when Host A (the Pi) is
