@@ -1,0 +1,15 @@
+# Compose deployment on aarch64 hosts.
+# Builds a base image with freeradius installed and auth logging enabled.
+# Config files are volume-mounted by docker-compose.yml — not copied here.
+# Config path: /etc/freeradius/3.0/
+
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends freeradius freeradius-utils \
+    && sed -i 's/auth = no/auth = yes/' /etc/freeradius/3.0/radiusd.conf \
+    && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 1812/udp
+
+CMD ["freeradius", "-f"]
