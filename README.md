@@ -161,10 +161,12 @@ make test-all      # test-server + test + teardown
 ```
 
 Tests send real RADIUS `Access-Request` packets and assert `Access-Accept` or `Access-Reject`
-responses. To test against a remote host:
+responses. `TEST_HOST` selects which `hosts/<host>/.env` to load for the port and secret.
+`RADIUS_HOST` overrides the server address (default: `127.0.0.1`).
 
 ```bash
-RADIUS_HOST=<hostname> make test
+TEST_HOST=host-1 make test                        # production host-1, local
+RADIUS_HOST=rasp5-1 TEST_HOST=host-2 make test    # production host-2, remote
 ```
 
 ---
