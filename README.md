@@ -148,4 +148,4 @@ Auth: (N) Login incorrect (rlm_policy: Randomized MAC Rejected): [<mac>] ...
 
 ## Failover behavior
 
-UniFi/hostapd retries the primary server several times before falling over to the secondary. This is **sequential failover**, not load balancing. Host B only receives requests when Host A is genuinely unreachable.
+The exact behavior of UniFi when two RADIUS servers are configured is **not yet confirmed** — it may be sequential failover (primary first, secondary only when primary is unreachable) or it may distribute requests between both servers. Further testing is needed. If your use case requires strict failover behavior, verify with your UniFi firmware version before relying on it.

@@ -87,7 +87,7 @@ In UniFi Network, when you enable RADIUS MAC Authentication on an SSID, a **"MAC
 4. Apply this profile to target SSIDs (not the guest SSID — randomized MACs are intentionally allowed there)
 5. On each target SSID: Settings → WiFi → [SSID] → Advanced → enable "RADIUS MAC Authentication", select your profile, choose a MAC Address Format
 
-**Failover behavior:** UniFi/hostapd retries the primary server several times before falling over to the secondary. This is sequential failover, not load balancing.
+**Failover behavior:** Not yet confirmed. UniFi may use sequential failover (primary first, secondary only when unreachable) or may distribute requests across both servers. Further testing needed.
 
 **PPSK note:** PPSK (Private Pre-Shared Keys) and RADIUS MAC Authentication are mutually exclusive on the same SSID. However, UniFi's built-in MAC allow/block lists are independent of RADIUS and *can* be combined with PPSK — so a PPSK SSID with a local MAC allow list is a viable alternative for future SSIDs where per-device PSKs are desirable alongside hardware MAC gating.
 
