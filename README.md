@@ -186,6 +186,20 @@ make test-production-ssh \
   RADIUS_HOST_2=<host-2-addr>
 ```
 
+If `make` is not available on Windows, run the equivalent directly:
+
+```bash
+ssh user@my-unix-box 'bash -s' << 'ENDSSH'
+cd ~/projects/radius-laa-blocker && git pull --quiet
+rc=0
+echo "=== host-1 (<host-1-addr>:1812) ==="
+RADIUS_HOST=<host-1-addr> TEST_HOST=host-1 tests/.venv/bin/pytest tests/ -v || rc=1
+echo "=== host-2 (<host-2-addr>:1812) ==="
+RADIUS_HOST=<host-2-addr> TEST_HOST=host-2 tests/.venv/bin/pytest tests/ -v || rc=1
+exit $rc
+ENDSSH
+```
+
 `test-production` always tests both hosts and exits non-zero if either fails.
 
 ---
