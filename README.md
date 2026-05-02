@@ -174,19 +174,19 @@ RADIUS_HOST=rasp5-1 TEST_HOST=host-2 make test    # production host-2, remote
 To run the full suite against both production hosts on port 1812:
 
 ```bash
-make test-production        # run locally (macOS/Linux — requires pyrad)
-make test-production-ssh    # run via SSH on chucks-mac-mini (use from Windows)
+# macOS / Linux
+make test-production RADIUS_HOST_1=<host-1-addr> RADIUS_HOST_2=<host-2-addr>
+
+# Windows (pyrad uses select.poll() which is unavailable on Windows —
+# run on a remote Unix host that has the repo checked out and venv set up)
+make test-production-ssh \
+  TEST_RUNNER_SSH_HOST=user@my-unix-box \
+  TEST_RUNNER_REPO_PATH=~/projects/radius-laa-blocker \
+  RADIUS_HOST_1=<host-1-addr> \
+  RADIUS_HOST_2=<host-2-addr>
 ```
 
 `test-production` always tests both hosts and exits non-zero if either fails.
-`test-production-ssh` SSHes to `chucks-mac-mini`, does a `git pull`, and runs
-the suite from there. Use this from Windows because pyrad uses `select.poll()`
-which is not available on Windows.
-
-Default hostnames (`chucks-mac-mini` / `rasp5-1`) can be overridden:
-```bash
-make test-production RADIUS_HOST_1=10.0.0.5 RADIUS_HOST_2=10.0.0.6
-```
 
 ---
 
