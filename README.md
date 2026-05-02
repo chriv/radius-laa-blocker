@@ -169,6 +169,25 @@ TEST_HOST=host-1 make test                        # production host-1, local
 RADIUS_HOST=rasp5-1 TEST_HOST=host-2 make test    # production host-2, remote
 ```
 
+### Production smoke tests
+
+To run the full suite against both production hosts on port 1812:
+
+```bash
+make test-production        # run locally (macOS/Linux — requires pyrad)
+make test-production-ssh    # run via SSH on chucks-mac-mini (use from Windows)
+```
+
+`test-production` always tests both hosts and exits non-zero if either fails.
+`test-production-ssh` SSHes to `chucks-mac-mini`, does a `git pull`, and runs
+the suite from there. Use this from Windows because pyrad uses `select.poll()`
+which is not available on Windows.
+
+Default hostnames (`chucks-mac-mini` / `rasp5-1`) can be overridden:
+```bash
+make test-production RADIUS_HOST_1=10.0.0.5 RADIUS_HOST_2=10.0.0.6
+```
+
 ---
 
 ## Tested with
