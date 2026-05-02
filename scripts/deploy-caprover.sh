@@ -43,6 +43,21 @@ tar -czf "$TARBALL" -C "$BUILD_DIR" .
 echo "Packaged: $TARBALL"
 
 SSH_HOST="${RADIUS_LAA_BLOCKER_CAPROVER_SSH_HOST:-}"
+SERVICE_NAME="srv-captain--${RADIUS_LAA_BLOCKER_CAPROVER_APP}"
+
+# Build the log-driver update command. CapRover may persist stale log driver
+# settings from its UI (e.g. a syslog driver configured when syslog was being
+# tested). We always stamp the correct driver after every deploy so the service
+# matches the current host .env regardless of what CapRover has stored.
+if [[ -n "${RADIUS_LAA_BLOCKER_SYSLOG_HOST:-}" ]]; then
+    LOG_DRIVER_CMD="docker service update \
+        --log-driver syslog \
+        --log-opt syslog-address=udp://${RADIUS_LAA_BLOCKER_SYSLOG_HOST}:${RADIUS_LAA_BLOCKER_SYSLOG_PORT} \
+        --log-opt tag=freeradius \
+        ${SERVICE_NAME}"
+else
+    LOG_DRIVER_CMD="docker service update --log-driver json-file ${SERVICE_NAME}"
+fi
 
 if [[ -n "$SSH_HOST" ]]; then
     # caprover lives on the remote host — scp tarball there and deploy via SSH
@@ -61,6 +76,9 @@ if [[ -n "$SSH_HOST" ]]; then
         caprover deploy
         rm -f \"$REMOTE_TARBALL\"
     "
+
+    echo "Setting log driver for $SERVICE_NAME..."
+    ssh "$SSH_HOST" "$LOG_DRIVER_CMD"
 else
     # caprover is available locally
     echo "Deploying to CapRover app $RADIUS_LAA_BLOCKER_CAPROVER_APP..."
@@ -69,4 +87,7 @@ else
     CAPROVER_APP_TOKEN="$RADIUS_LAA_BLOCKER_CAPROVER_TOKEN" \
     CAPROVER_TAR_FILE="$TARBALL" \
     caprover deploy
+
+    echo "Setting log driver for $SERVICE_NAME..."
+    eval "$LOG_DRIVER_CMD"
 fi
